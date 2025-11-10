@@ -93,22 +93,9 @@
                 {
                     id: 'avgDOM',
                     title: "Average Days on Market (DOM)",
-                    query: `Median days on market "${safeCity}" ${safePropertyType} statistics AI overview`,
-                    description: "Typical time to sell. Impacts pricing urgency."
-                },
-                {
-                    id: 'nearbyCompetition', 
-                    title: "Nearby Active Listings (Competition)",
-                    // UPDATED QUERY
-                    query: `how many "${safeCity}" current active listings ${safePropertyType} AI overview`,
-                    description: "Current number of similar competitors in your direct area (Neighborhood level count is best)."
-                },
-                {
-                    id: 'citySales30Days',
-                    title: "Total Sales (Last 30 Days)",
-                    // UPDATED QUERY
-                    query: `how many ${safePropertyType} "${safeCity}" sold listings last 30 days AI overview`,
-                    description: "Recent transaction volume. Shows demand."
+                    // UPDATED PROMPT: Requesting a trailing average over the last 30 days
+                    query: `Average Days on Market last 30 days "${safeCity}" ${safePropertyType} AI overview`,
+                    description: "Typical time to sell. Impacts pricing urgency. (Look for a 30-day average)"
                 },
                 {
                     id: 'priceTrend90Days',
@@ -149,7 +136,6 @@
               type: 'text',
               placeholder: 'e.g., 1,500 sq ft, 2 bed/2 bath'
             },
-            // REMOVED: comparablesSold question
             {
               id: 'propertyCondition',
               title: 'What is the property condition?',
@@ -203,7 +189,7 @@
                 <div className="bg-white rounded-2xl shadow-xl p-0">
                     <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
                         <Database className="w-6 h-6 text-blue-600 mr-2" />
-                        Input Market Data
+                        Input Key Market Data (3 Inputs Required)
                     </h3>
                     <p className="text-gray-600 mb-6">
                         Use the search tools below to quickly find the current statistics for {city || 'your area'}, then enter the raw data here.
@@ -267,16 +253,12 @@
             const [rawMarketData, setRawMarketData] = useState({
                 snlr: '',
                 avgDOM: '',
-                nearbyCompetition: '',
-                citySales30Days: '',
                 priceTrend90Days: ''
             });
 
             const PROPERTY_INFO_COUNT = 4;
-            // UPDATED COUNT: 7 questions total - 4 property info = 3 strategy questions
             const STRATEGY_INFO_COUNT = 3; 
             const MARKET_DATA_STEP_INDEX = PROPERTY_INFO_COUNT;
-            // UPDATED COUNT: 4 property + 1 market data + 3 strategy = 8 steps
             const TOTAL_STEPS = PROPERTY_INFO_COUNT + 1 + STRATEGY_INFO_COUNT;
 
             const handleAnswer = (questionId, value) => {
@@ -302,16 +284,13 @@
                 setRawMarketData({
                     snlr: '',
                     avgDOM: '',
-                    nearbyCompetition: '',
-                    citySales30Days: '',
                     priceTrend90Days: ''
                 });
             };
 
             const calculatePricingStrategy = () => {
-                // REMOVED 'comparablesSold' from answers destructuring
                 const { sellingTechnique, propertyCondition, urgency } = answers;
-                const { snlr: rawSNLR, avgDOM: rawAvgDOM, priceTrend90Days: rawTrend, nearbyCompetition: rawCompetition } = rawMarketData;
+                const { snlr: rawSNLR, avgDOM: rawAvgDOM, priceTrend90Days: rawTrend } = rawMarketData;
 
                 let strategy = {
                     approach: '',
@@ -319,14 +298,13 @@
                     reasoning: [],
                     tactics: [],
                     risks: [],
-                    marketSource: 'Based on Raw Data',
+                    marketSource: 'Based on Core Market Data',
                     marketConditionText: 'N/A',
                     daysOnMarketText: 'N/A',
                     feeRange: { min: 0, max: 0, applies: false, feeType: 'No Commission' },
                     netDiscountRange: { min: 0, max: 0 },
                     minDiscount: 0, 
                     maxDiscount: 0,
-                    // NEW: Timeframe strategy suggestion
                     timeframeOption: { suggestion: '', reason: [] }
                 };
 
@@ -358,22 +336,16 @@
                     else if (dom <= 60) daysOnMarketText = '31-60 days';
                     else daysOnMarketText = 'Over 60 days';
 
+                    // Re-enforce market condition based on DOM
                     if (dom < 10) isHotMarket = true;
                     if (dom > 60) isBuyersMarket = true;
                 } else {
                     daysOnMarketText = 'N/A - Average Days on Market not provided.';
                 }
-
-                let highCompetition = false;
-                const competitionCount = parseFloat(rawCompetition);
-                if (!isNaN(competitionCount) && competitionCount >= 6) {
-                    highCompetition = true;
-                }
                 
                 const isOffMarket = sellingTechnique?.includes('Off-Market');
                 const isMLSListing = sellingTechnique?.includes('Traditional MLS');
                 const isUrgent = urgency?.includes('Very urgent') || urgency?.includes('Moderately urgent');
-                const isExcellentCondition = propertyCondition?.includes('Excellent');
                 const isPoorCondition = propertyCondition?.includes('Poor') || propertyCondition?.includes('Fixer-upper');
                 
                 strategy.marketConditionText = marketConditionText;
@@ -397,12 +369,12 @@
                         `Low days on market (${daysOnMarketText}) indicates high buyer demand that can be leveraged.`,
                         rawTrend === 'Up' ? 'Prices are trending UP, allowing for aggressive under-pricing to capture peak demand.' : 'The price trend is stable, but high demand warrants this strategy.'
                     );
-                } else if (isBuyersMarket || highCompetition) {
+                } else if (isBuyersMarket) {
                     strategy.approach = 'Competitive Market Pricing (Aggressive Positioning)';
                     strategy.minDiscount = 0;
                     strategy.maxDiscount = 5;
                     strategy.reasoning.push(
-                        'High inventory or slow DOM means buyers have many choices; price must be competitive from day one.',
+                        'A slow market (Buyer\'s Market) means buyers have many choices; price must be competitive from day one.',
                         'Overpricing will result in the property sitting and becoming stale.',
                         rawTrend === 'Down' ? 'Prices are trending DOWN, making sharp initial pricing absolutely mandatory.' : 'High inventory requires a compelling price point.'
                     );
@@ -426,17 +398,14 @@
                     strategy.reasoning.push('Property condition requires significant discount for repairs.');
                 }
 
-                // --- 3. DETERMINE BEST TIMEFRAME OPTION (NEW) ---
-                let timeframeOption = {
-                    suggestion: '',
-                    reason: []
-                };
+                // --- 3. DETERMINE BEST TIMEFRAME OPTION ---
+                let timeframeOption = { suggestion: '', reason: [] };
 
                 if (urgency?.includes('Very urgent')) {
                     timeframeOption.suggestion = 'Aggressive Under-Pricing (5-10% below Comps) OR Off-Market Deal';
                     timeframeOption.reason.push("Your goal is to sell in under 30 days, which requires a price that immediately captures the attention of high-urgency buyers or investors. Only an extremely compelling price, or an investor deal, will guarantee this timeline.");
                 } else if (urgency?.includes('Moderately urgent')) {
-                    timeframeOption.suggestion = isBuyersMarket || highCompetition ? 'Competitive Market Pricing (0-5% below Comps)' : 'Under-Pricing Strategy (3-7% below Comps)';
+                    timeframeOption.suggestion = isBuyersMarket ? 'Competitive Market Pricing (0-5% below Comps)' : 'Under-Pricing Strategy (3-7% below Comps)';
                     timeframeOption.reason.push("A 30-60 day window is achievable with strong competitive pricing. If the market is slow, price aggressively.");
                 } else if (urgency?.includes('Normal timeline')) {
                     timeframeOption.suggestion = 'Market Value Pricing (0-3% below Comps)';
@@ -516,14 +485,14 @@
                                         <li><span className='font-bold'>Average DOM:</span> {strategy.daysOnMarketText}</li>
                                         <li><span className='font-bold'>SNLR:</span> {rawMarketData.snlr || 'N/A'}</li>
                                         <li><span className='font-bold'>Price Trend:</span> {rawMarketData.priceTrend90Days || 'N/A'}</li>
-                                        <li><span className='font-bold'>Nearby Listings:</span> {rawMarketData.nearbyCompetition || 'N/A'} (Sales Last 30 Days: {rawMarketData.citySales30Days || 'N/A'})</li>
+                                        <li className='text-xs text-blue-600 italic pt-2'>*Tool focused on core market stats (SNLR, DOM, Trend) to reduce user input.*</li>
                                     </ul>
                                 </div>
                                 
-                                {/* TIMEFRAME STRATEGY (NEW BLOCK) */}
+                                {/* TIMEFRAME STRATEGY */}
                                 <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
                                     <h3 className="text-xl font-bold text-yellow-900 mb-2">Best Option for Your Timeframe ({answers.urgency})</h3>
-                                    <p className="text-xl font-semibold text-yellow-700 mb-2">{strategy.timeframeOption.suggestion}</p>
+                                    <p className="text-2xl font-semibold text-yellow-700 mb-2">{strategy.timeframeOption.suggestion}</p>
                                     <div className="mt-4 pt-4 border-t border-yellow-200">
                                         <h4 className="text-base font-bold text-yellow-800 mb-1">Reasoning:</h4>
                                         <ul className="space-y-1 text-yellow-800 text-sm">
@@ -616,6 +585,7 @@
                     />
                 );
 
+                // Now only require the 3 core statistical inputs
                 const requiredMarketData = ['snlr', 'avgDOM', 'priceTrend90Days'];
                 disableNextButton = requiredMarketData.some(id => !rawMarketData[id]);
 
