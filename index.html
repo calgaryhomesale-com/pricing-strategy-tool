@@ -164,9 +164,7 @@
               type: 'text',
               placeholder: 'e.g., 1,500 sq ft, 2 bed/2 bath'
             },
-            // REMOVED: marketCondition - now derived from SNLR
-            // REMOVED: daysOnMarket - now derived from avgDOM
-            // REMOVED: competition - now a raw data input
+            // MARKET DATA STEP INSERTED HERE (INDEX 4)
             {
               id: 'comparablesSold',
               title: 'Have you found reliable comparable sales (comps) from the last 3-6 months?',
@@ -240,18 +238,19 @@
 
             const getInputType = (id) => {
                 if (id === 'priceTrend90Days') return 'select';
+                // snlr and nearbyCompetition can be decimals or numbers
                 if (id === 'snlr') return 'number';
                 return 'number';
             };
 
             return (
-                <div className="bg-white rounded-2xl shadow-xl p-8 mt-6 border-t-4 border-blue-500">
+                <div className="bg-white rounded-2xl shadow-xl p-0">
                     <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
                         <Database className="w-6 h-6 text-blue-600 mr-2" />
                         Input Market Data
                     </h3>
                     <p className="text-gray-600 mb-6">
-                        Use the search links below to find the current statistics, then enter the raw data here. This data will be used to calculate your strategy.
+                        Use the Google Search links to find the current statistics for {city || 'your area'}, then enter the raw data below. This data will be used to calculate your strategy.
                     </p>
 
                     <div className="space-y-6">
@@ -309,17 +308,21 @@
           const [rawMarketData, setRawMarketData] = useState({
             snlr: '',
             avgDOM: '',
-            nearbyCompetition: '', // Changed from cityListings
+            nearbyCompetition: '',
             citySales30Days: '',
             priceTrend90Days: ''
           });
+
+          // Define step structure
+          const MARKET_DATA_STEP_INDEX = 4;
+          const TOTAL_STEPS = questions.length + 1; // 8 selection questions + 1 market data step = 9
 
           const handleAnswer = (questionId, value) => {
             setAnswers({ ...answers, [questionId]: value });
           };
 
           const nextStep = () => {
-            if (step < questions.length - 1) {
+            if (step < TOTAL_STEPS - 1) {
               setStep(step + 1);
             } else {
               setShowResults(true);
@@ -411,7 +414,6 @@
             let highCompetition = false;
             const competitionCount = parseFloat(rawCompetition);
             if (!isNaN(competitionCount)) {
-                // Using 6+ as the threshold for high/moderate competition based on old options
                 if (competitionCount >= 6) { 
                     highCompetition = true; 
                 }
@@ -542,21 +544,19 @@
             let feeRange = { min: 0, max: 0, applies: false, feeType: 'No Commission' };
 
             if (sellingTechnique?.includes('Traditional MLS') || sellingTechnique?.includes('Hybrid')) {
-                // Standard commission + legal: typically 3.5% to 5% in Canada. Using 3-5% for simplicity.
+                // Standard commission + legal: typically 3.5% to 5% in Canada.
                 feeRange = { min: 3, max: 5, applies: true, feeType: 'Standard MLS Commission/Fees' }; 
             } else if (sellingTechnique?.includes('Auction')) {
-                 // Auction fees can be high
                  feeRange = { min: 5, max: 8, applies: true, feeType: 'Auction Fees/Commissions' };
             } else if (sellingTechnique?.includes('For Sale By Owner')) {
-                // Legal, admin fees, potential small buyer agent commission. Using 0.5-2%.
+                // Legal, admin fees, potential small buyer agent commission. 
                 feeRange = { min: 0.5, max: 2, applies: true, feeType: 'Legal/Admin Fees Only' };
             } else if (sellingTechnique?.includes('Off-Market')) {
-                // Legal, admin fees, potential small finder's fee. Using 1-3%.
+                // Legal, admin fees, potential small finder's fee.
                 feeRange = { min: 1, max: 3, applies: true, feeType: 'Low Transaction/Finder Fees' };
             }
 
             // Calculate Net to Seller impact (Discount + Fees)
-            // Ensure min discount doesn't go below 0 (though theoretically it could if pricing ABOVE market value)
             strategy.minDiscount = Math.max(0, strategy.minDiscount); 
             
             const netMin = strategy.minDiscount + feeRange.min; 
@@ -567,7 +567,6 @@
             
             // Format percentage string cleanly for the final display
             if (strategy.approach.includes('Below Market Value Pricing')) {
-                // Convert back from discount range (15-25%) to listing range (75-85% of market value)
                 strategy.percentage = `${100 - strategy.maxDiscount}% - ${100 - strategy.minDiscount}% of estimated market value`;
             } else if (strategy.approach.includes('Market Value Pricing')) {
                  strategy.percentage = 'At or slightly below estimated market value (0-3% below)';
@@ -575,13 +574,20 @@
                  strategy.percentage = `${strategy.minDiscount}-${strategy.maxDiscount}% below estimated market value`;
             }
 
-
             return strategy;
           };
 
-          const currentQuestion = questions[step];
-          const Icon = currentQuestion?.icon;
-          const progress = ((step + 1) / questions.length) * 100;
+          const progress = ((step + 1) / TOTAL_STEPS) * 100;
+
+          // Logic to map global step index to the question array index
+          const getQuestionIndex = (currentStep) => {
+              if (currentStep < MARKET_DATA_STEP_INDEX) return currentStep;
+              if (currentStep > MARKET_DATA_STEP_INDEX) return currentStep - 1;
+              return null; // Market Data Step
+          }
+          
+          const currentQuestionIndex = getQuestionIndex(step);
+          const currentQuestion = currentQuestionIndex !== null ? questions[currentQuestionIndex] : null;
 
           // Results View
           if (showResults) {
@@ -627,7 +633,7 @@
                         </h4>
                         <p className="text-base text-green-700">
                           <span className='font-semibold'>Total Expected Reduction:</span> 
-                          {strategy.netDiscountRange.min}% - {strategy.netDiscountRange.max}% off potential Market Value
+                          {strategy.netDiscountRange.min.toFixed(1)}% - {strategy.netDiscountRange.max.toFixed(1)}% off potential Market Value
                         </p>
                         <p className="text-sm text-green-600 mt-2">
                             <span className='font-bold'>Breakdown:</span> (Price Discount/Negotiation) + ({strategy.feeRange.min}%-{strategy.feeRange.max}% {strategy.feeRange.feeType})
@@ -716,25 +722,31 @@
             );
           }
 
-          // Question/Input View
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-8 flex items-center justify-center">
-              <div className="max-w-xl w-full mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-10">
-                <div className="mb-8">
-                  <h1 className="text-3xl font-extrabold text-gray-800 mb-2 flex items-center">
-                    <DollarSign className="w-8 h-8 text-blue-600 mr-2" />
-                    Home Pricing Strategy Tool
-                  </h1>
-                  <p className="text-gray-600 text-sm">Canadian Real Estate | Step {step + 1} of {questions.length}</p>
-                  <div className="mt-4 bg-gray-200 rounded-full h-2.5">
-                    <div
-                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-                </div>
+          let pageTitle, pageContent, disableNextButton = false;
 
-                {/* Current Question Block */}
+          if (step === MARKET_DATA_STEP_INDEX) {
+              // 2. Market Data Input Page
+              pageTitle = "Step 5/9: Input Market Research Data";
+              pageContent = (
+                  <MarketDataInputForm 
+                      city={answers.city} 
+                      propertyType={answers.propertyType}
+                      rawMarketData={rawMarketData} 
+                      setRawMarketData={setRawMarketData} 
+                  />
+              );
+
+              // Disable next if required fields in rawMarketData are missing
+              const requiredMarketData = ['snlr', 'avgDOM', 'priceTrend90Days'];
+              disableNextButton = requiredMarketData.some(id => !rawMarketData[id]);
+
+          } else {
+              // 1. Standard Question Page
+              const Icon = currentQuestion.icon;
+              const stepNumber = step < MARKET_DATA_STEP_INDEX ? step + 1 : step;
+              pageTitle = `Step ${stepNumber}/${TOTAL_STEPS}: Property & Strategy Details`;
+              
+              pageContent = (
                 <div className="bg-white rounded-xl p-0">
                   <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-start">
                     {Icon && <Icon className="w-6 h-6 text-blue-600 mr-3 mt-1 flex-shrink-0" />}
@@ -769,16 +781,29 @@
                     />
                   )}
                 </div>
+              );
+              disableNextButton = !answers[currentQuestion.id];
+          }
 
-                {/* Market Data Input Section after core questions are answered */}
-                {step >= 3 && (
-                    <MarketDataInputForm 
-                        city={answers.city} 
-                        propertyType={answers.propertyType}
-                        rawMarketData={rawMarketData} 
-                        setRawMarketData={setRawMarketData} 
-                    />
-                )}
+          // Question/Input View
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-8 flex items-center justify-center">
+              <div className="max-w-xl w-full mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-10">
+                <div className="mb-8">
+                  <h1 className="text-3xl font-extrabold text-gray-800 mb-2 flex items-center">
+                    <DollarSign className="w-8 h-8 text-blue-600 mr-2" />
+                    Home Pricing Strategy Tool
+                  </h1>
+                  <p className="text-gray-600 text-sm">{pageTitle}</p>
+                  <div className="mt-4 bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {pageContent}
 
                 {/* Navigation Buttons */}
                 <div className="flex gap-4 pt-8">
@@ -797,14 +822,14 @@
 
                   <button
                     onClick={nextStep}
-                    disabled={!answers[currentQuestion.id]}
+                    disabled={disableNextButton}
                     className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                      !answers[currentQuestion.id]
+                      disableNextButton
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                   >
-                    {step === questions.length - 1 ? 'Calculate Strategy' : 'Next'}
+                    {step === TOTAL_STEPS - 1 ? 'Calculate Strategy' : 'Next'}
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
