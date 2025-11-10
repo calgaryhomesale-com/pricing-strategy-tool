@@ -93,7 +93,6 @@
                 {
                     id: 'avgDOM',
                     title: "Average Days on Market (DOM)",
-                    // UPDATED PROMPT: Requesting a trailing average over the last 30 days
                     query: `Average Days on Market last 30 days "${safeCity}" ${safePropertyType} AI overview`,
                     description: "Typical time to sell. Impacts pricing urgency. (Look for a 30-day average)"
                 },
@@ -180,7 +179,7 @@
             };
             
             const getPlaceholder = (id) => {
-                if (id === 'snlr') return 'e.g., 0.75 (for 75%)';
+                if (id === 'snlr') return 'e.g., 0.75 or 75';
                 if (id === 'avgDOM') return 'e.g., 21 (for 21 days)';
                 return 'Enter number';
             };
@@ -296,9 +295,6 @@
                     approach: '',
                     percentage: '',
                     reasoning: [],
-                    tactics: [],
-                    risks: [],
-                    marketSource: 'Based on Core Market Data',
                     marketConditionText: 'N/A',
                     daysOnMarketText: 'N/A',
                     feeRange: { min: 0, max: 0, applies: false, feeType: 'No Commission' },
@@ -312,8 +308,13 @@
                 let isBuyersMarket = false;
                 let marketConditionText = 'Balanced Market (Default)';
                 let daysOnMarketText = 'N/A';
+                
+                // --- FIX: Correctly interpret SNLR as a decimal value ---
+                let snlr = parseFloat(rawSNLR);
+                if (snlr > 1) { 
+                    snlr = snlr / 100; // Assume percentage was entered (e.g., 58 -> 0.58)
+                } 
 
-                const snlr = parseFloat(rawSNLR);
                 if (!isNaN(snlr) && snlr > 0) {
                     if (snlr > 0.6) {
                         isHotMarket = true;
@@ -365,61 +366,76 @@
                     strategy.minDiscount = 5;
                     strategy.maxDiscount = 10;
                     strategy.reasoning.push(
-                        'A hot market with low inventory is perfect for generating a competitive bidding environment.',
-                        `Low days on market (${daysOnMarketText}) indicates high buyer demand that can be leveraged.`,
-                        rawTrend === 'Up' ? 'Prices are trending UP, allowing for aggressive under-pricing to capture peak demand.' : 'The price trend is stable, but high demand warrants this strategy.'
+                        'The market is heavily favoring sellers (Hot Market).',
+                        `Low days on market (${daysOnMarketText}) indicates high buyer demand that can be leveraged to generate a bidding war.`,
+                        rawTrend === 'Up' ? 'Prices are trending UP, supporting an aggressive under-price to capture peak demand.' : 'The price trend is stable, but high demand warrants this strategy.'
                     );
                 } else if (isBuyersMarket) {
                     strategy.approach = 'Competitive Market Pricing (Aggressive Positioning)';
                     strategy.minDiscount = 0;
                     strategy.maxDiscount = 5;
                     strategy.reasoning.push(
-                        'A slow market (Buyer\'s Market) means buyers have many choices; price must be competitive from day one.',
-                        'Overpricing will result in the property sitting and becoming stale.',
+                        'The market is heavily favoring buyers (Buyer\'s Market). Buyers have many choices; price must be highly competitive from day one.',
+                        'Overpricing will result in the property sitting stale.',
                         rawTrend === 'Down' ? 'Prices are trending DOWN, making sharp initial pricing absolutely mandatory.' : 'High inventory requires a compelling price point.'
                     );
                 } else {
+                    // This is the Balanced Market scenario (where SNLR=0.58 falls)
                     strategy.approach = 'Market Value Pricing (Evidence-Based)';
                     strategy.minDiscount = 0;
                     strategy.maxDiscount = 3; 
                     strategy.reasoning.push(
-                        'A balanced market allows for fair, accurate valuation based solely on comparable sales (comps).',
+                        'The market is Balanced, meaning fair valuation based on comparable sales (comps) is key.',
                         'The goal is to align price with market expectation and property quality.'
                     );
                 }
 
-                // --- 2. APPLY URGENCY MODIFIER ---
+                // --- 2. APPLY URGENCY MODIFIER (Overrides Balanced Strategy for high urgency) ---
                 if (isUrgent && !isOffMarket) {
-                    strategy.reasoning.push('Urgent timeline: Requires an extra 3-5% discount below the determined strategy to ensure immediate action.');
+                    // Update approach for better clarity when urgency overrides balanced/buyer's market.
+                    if (strategy.approach.includes('Market Value Pricing')) {
+                         strategy.approach = 'Aggressive Market Value Pricing (Due to Urgency/Trend)';
+                         strategy.reasoning.push('The need to sell quickly (Urgent timeline) requires an immediate price adjustment.', 
+                                                 `The price trend is ${rawTrend}, which reinforces the need to price sharply now.`);
+                    } else if (strategy.approach.includes('Competitive Market Pricing')) {
+                        strategy.reasoning.push('The need to sell quickly (Urgent timeline) requires pushing the price to the lower end of the competitive range to ensure immediate action.');
+                    }
+                    
+                    // Apply extra discount
                     strategy.maxDiscount += 5;
                     strategy.minDiscount += 3;
                 }
+
+                // --- 3. APPLY CONDITION MODIFIER ---
                 if (isPoorCondition) {
-                    strategy.reasoning.push('Property condition requires significant discount for repairs.');
+                    strategy.reasoning.push('Property condition is poor/fixer-upper, justifying a deeper discount to account for buyer repair costs.');
+                    if (!isOffMarket) {
+                        strategy.maxDiscount += 3;
+                    }
                 }
 
-                // --- 3. DETERMINE BEST TIMEFRAME OPTION ---
+                // --- 4. DETERMINE BEST TIMEFRAME OPTION ---
                 let timeframeOption = { suggestion: '', reason: [] };
 
                 if (urgency?.includes('Very urgent')) {
-                    timeframeOption.suggestion = 'Aggressive Under-Pricing (5-10% below Comps) OR Off-Market Deal';
-                    timeframeOption.reason.push("Your goal is to sell in under 30 days, which requires a price that immediately captures the attention of high-urgency buyers or investors. Only an extremely compelling price, or an investor deal, will guarantee this timeline.");
+                    timeframeOption.suggestion = 'Aggressive Under-Pricing (Guaranteed Sale)';
+                    timeframeOption.reason.push("Your goal is to sell in under 30 days. This requires a price that generates *immediate* attention (bidding war) or moving straight to an investor deal. Only an extremely compelling price will guarantee this timeline.");
                 } else if (urgency?.includes('Moderately urgent')) {
-                    timeframeOption.suggestion = isBuyersMarket ? 'Competitive Market Pricing (0-5% below Comps)' : 'Under-Pricing Strategy (3-7% below Comps)';
-                    timeframeOption.reason.push("A 30-60 day window is achievable with strong competitive pricing. If the market is slow, price aggressively.");
+                    timeframeOption.suggestion = 'Competitive Pricing (30-60 day target)';
+                    timeframeOption.reason.push("A 30-60 day window is achievable with strong competitive pricing. If the market is slow or trending down, price aggressively at the lower end of your range.");
                 } else if (urgency?.includes('Normal timeline')) {
-                    timeframeOption.suggestion = 'Market Value Pricing (0-3% below Comps)';
-                    timeframeOption.reason.push("A 60-90 day timeline aligns perfectly with a well-researched market value price, allowing time for market exposure and negotiations.");
+                    timeframeOption.suggestion = 'Market Value Pricing (60-90 day target)';
+                    timeframeOption.reason.push("A 60-90 day timeline aligns perfectly with a well-researched market value price, allowing time for negotiations and exposure.");
                 } else if (urgency?.includes('Flexible') || urgency?.includes('No rush')) {
-                    timeframeOption.suggestion = 'Patience/Premium Pricing (Start at Market Value or up to 5% OVER)';
-                    timeframeOption.reason.push("With a flexible timeline, you can prioritize price over speed. Start strong and wait for the buyer willing to pay a premium. The market will tell you if a price reduction is needed after 30 days.");
+                    timeframeOption.suggestion = 'Patience/Premium Pricing (Start Strong, Wait for Premium)';
+                    timeframeOption.reason.push("With a flexible timeline, you can prioritize price over speed. Start strong and wait for the buyer willing to pay a premium. Be prepared to reassess after 30 days.");
                 } else {
                     timeframeOption.suggestion = 'A Balanced Market Value strategy is the default recommendation.';
                     timeframeOption.reason.push("No specific urgency was noted.");
                 }
                 strategy.timeframeOption = timeframeOption;
 
-                // --- 4. CALCULATE FEES AND NET IMPACT ---
+                // --- 5. CALCULATE FEES AND NET IMPACT ---
                 let feeRange = { min: 0, max: 0, applies: false, feeType: 'No Commission' };
 
                 if (sellingTechnique?.includes('Traditional MLS') || sellingTechnique?.includes('Hybrid')) {
@@ -441,11 +457,9 @@
                 strategy.netDiscountRange = { min: netMin, max: netMax };
                 
                 if (strategy.approach.includes('Below Market Value Pricing')) {
-                    strategy.percentage = `${100 - strategy.maxDiscount}% - ${100 - strategy.minDiscount}% of estimated market value`;
-                } else if (strategy.approach.includes('Market Value Pricing')) {
-                    strategy.percentage = 'At or slightly below estimated market value (0-3% below)';
+                    strategy.percentage = `${100 - strategy.maxDiscount}% - ${100 - strategy.minDiscount}% of Estimated Market Value`;
                 } else {
-                    strategy.percentage = `${strategy.minDiscount}-${strategy.maxDiscount}% below estimated market value`;
+                    strategy.percentage = `${strategy.minDiscount}-${strategy.maxDiscount}% below Estimated Market Value`;
                 }
 
                 return strategy;
@@ -464,6 +478,8 @@
 
             if (showResults) {
                 const strategy = calculatePricingStrategy();
+                const snlrDisplay = (parseFloat(rawMarketData.snlr) > 1 ? rawMarketData.snlr : (parseFloat(rawMarketData.snlr) * 100).toFixed(0)) + '%';
+
 
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-8">
@@ -473,60 +489,35 @@
                                     <DollarSign className="w-12 h-12 text-green-600" />
                                 </div>
                                 <h2 className="text-3xl font-bold text-gray-800 mb-2">Your Final Pricing Strategy</h2>
+                                <p className="text-lg text-gray-600">Based on **{strategy.marketConditionText.split('(')[0].trim()} Market** and Your **{answers.urgency}** Timeline</p>
                             </div>
 
                             <div className="space-y-6">
-                                {/* MARKET INSIGHTS */}
-                                <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
-                                    <h3 className="text-xl font-bold text-blue-900 mb-2">Market Insights</h3>
-                                    <p className='text-sm text-blue-800 font-semibold mb-2'>{strategy.marketSource}</p>
-                                    <ul className="space-y-1 text-blue-800 text-sm">
-                                        <li><span className='font-bold'>Market Type:</span> {strategy.marketConditionText}</li>
-                                        <li><span className='font-bold'>Average DOM:</span> {strategy.daysOnMarketText}</li>
-                                        <li><span className='font-bold'>SNLR:</span> {rawMarketData.snlr || 'N/A'}</li>
-                                        <li><span className='font-bold'>Price Trend:</span> {rawMarketData.priceTrend90Days || 'N/A'}</li>
-                                        <li className='text-xs text-blue-600 italic pt-2'>*Tool focused on core market stats (SNLR, DOM, Trend) to reduce user input.*</li>
-                                    </ul>
+                                {/* PRIMARY PRICING APPROACH (CONSOLIDATED) */}
+                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-6 rounded-r-lg shadow-md">
+                                    <h3 className="text-xl font-bold text-green-900 mb-1">Recommended Approach</h3>
+                                    <p className="text-3xl font-extrabold text-green-700 mb-3">{strategy.approach}</p>
+                                    <h4 className="text-xl text-green-800 font-semibold border-t border-green-200 pt-3">
+                                        Target Listing Price: {strategy.percentage}
+                                    </h4>
                                 </div>
                                 
-                                {/* TIMEFRAME STRATEGY */}
-                                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
-                                    <h3 className="text-xl font-bold text-yellow-900 mb-2">Best Option for Your Timeframe ({answers.urgency})</h3>
-                                    <p className="text-2xl font-semibold text-yellow-700 mb-2">{strategy.timeframeOption.suggestion}</p>
-                                    <div className="mt-4 pt-4 border-t border-yellow-200">
-                                        <h4 className="text-base font-bold text-yellow-800 mb-1">Reasoning:</h4>
-                                        <ul className="space-y-1 text-yellow-800 text-sm">
-                                            {strategy.timeframeOption.reason.map((r, idx) => <li key={idx} className="flex items-start"><span className="text-yellow-500 mr-2 mt-1">•</span>{r}</li>)}
-                                        </ul>
+                                {/* TIMEFRAME STRATEGY (Simplified) */}
+                                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg shadow-md">
+                                    <h3 className="text-xl font-bold text-yellow-900 mb-2">Goal: {answers.urgency}</h3>
+                                    <p className="text-lg font-medium text-yellow-700 mb-3">
+                                        **Suggested Tactic:** {strategy.timeframeOption.suggestion}
+                                    </p>
+                                    <div className="mt-2 pt-2 border-t border-yellow-200">
+                                        <h4 className="text-sm font-bold text-yellow-800 mb-1">Why this timeframe requires this tactic:</h4>
+                                        <p className="text-sm text-yellow-800">{strategy.timeframeOption.reason[0]}</p>
                                     </div>
                                 </div>
 
 
-                                {/* PRICING APPROACH */}
-                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-6 rounded-r-lg">
-                                    <h3 className="text-xl font-bold text-green-900 mb-2">Recommended Pricing Approach</h3>
-                                    <p className="text-2xl font-semibold text-green-700 mb-2">{strategy.approach}</p>
-                                    <p className="text-xl text-green-600">Target Listing Price: {strategy.percentage}</p>
-                                    
-                                    <div className="mt-4 pt-4 border-t border-green-200">
-                                        <h4 className="text-lg font-bold text-green-800 flex items-center mb-1">
-                                            <DollarSign className="w-5 h-5 mr-1" /> Estimated Net-to-Seller Impact
-                                        </h4>
-                                        <p className="text-base text-green-700">
-                                            <span className='font-semibold'>Total Expected Reduction:</span> 
-                                            {strategy.netDiscountRange.min.toFixed(1)}% - {strategy.netDiscountRange.max.toFixed(1)}% off potential Market Value
-                                        </p>
-                                        <p className="text-sm text-green-600 mt-2">
-                                            <span className='font-bold'>Breakdown:</span> (Price Discount/Negotiation) + ({strategy.feeRange.min}%-{strategy.feeRange.max}% {strategy.feeRange.feeType})
-                                        </p>
-                                        <p className='text-xs text-green-500 mt-1'>
-                                            *This is the estimated total cost/discount (price reduction + fees) when compared to 100% of estimated market value.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white border border-gray-200 p-6 rounded-lg">
-                                    <h3 className="text-lg font-bold text-gray-800 mb-3">Why This Strategy (Core Reasoning)</h3>
+                                {/* CORE REASONING & MARKET INSIGHTS */}
+                                <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-md">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-4">Core Strategy Justification</h3>
                                     <ul className="space-y-2">
                                         {strategy.reasoning.map((reason, idx) => (
                                             <li key={idx} className="flex items-start">
@@ -535,20 +526,37 @@
                                             </li>
                                         ))}
                                     </ul>
+                                    
+                                    <div className="mt-6 pt-4 border-t border-gray-100">
+                                        <h4 className="text-lg font-bold text-blue-800 mb-2 flex items-center">
+                                            <Database className="w-5 h-5 text-blue-600 mr-2" />
+                                            Market Data Summary
+                                        </h4>
+                                        <div className="flex justify-between text-sm text-gray-700">
+                                            <p><span className='font-bold'>Market Type:</span> {strategy.marketConditionText}</p>
+                                            <p><span className='font-bold'>Avg DOM:</span> {strategy.daysOnMarketText}</p>
+                                            <p><span className='font-bold'>SNLR:</span> {snlrDisplay}</p>
+                                            <p><span className='font-bold'>Price Trend:</span> {rawMarketData.priceTrend90Days || 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* NET IMPACT (Simplified Title) */}
+                                <div className="bg-gray-50 border border-gray-200 p-6 rounded-lg shadow-md">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center">
+                                        <DollarSign className="w-5 h-5 mr-1" /> Estimated Total Discount Range
+                                    </h3>
+                                    <p className="text-2xl font-semibold text-red-600">
+                                        {strategy.netDiscountRange.min.toFixed(1)}% - {strategy.netDiscountRange.max.toFixed(1)}%
+                                    </p>
+                                    <p className="text-sm text-gray-600 mt-2">
+                                        <span className='font-bold'>This includes:</span> The price reduction/negotiation ({strategy.minDiscount}%-{strategy.maxDiscount}%) **PLUS** commission/fees ({strategy.feeRange.min}%-{strategy.feeRange.max}% {strategy.feeRange.feeType}).
+                                    </p>
+                                    <p className='text-xs text-gray-500 mt-1'>
+                                        *This range represents the estimated total loss from 100% of the potential market value.*
+                                    </p>
                                 </div>
 
-                                <div className="bg-gray-50 border border-gray-200 p-6 rounded-lg">
-                                    <h3 className="text-lg font-bold text-gray-800 mb-3">Critical Next Step: Find Comparable Sales (Comps)</h3>
-                                    <p className="text-sm text-gray-600 mb-4">The final price point (e.g., $550,000) must come from comparing your home's features to 3-5 recently sold homes in your direct neighborhood.</p>
-                                    <a
-                                        href={`https://www.google.com/search?q=${encodeURIComponent(`site:realtor.ca "${answers.neighborhood}" "${answers.city}" sold ${answers.propertyType} ${answers.squareFootage}`)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block p-3 bg-white border-2 border-blue-500 rounded-lg text-blue-600 text-center font-semibold hover:bg-blue-50 transition-colors"
-                                    >
-                                        🔍 Find Comparable Sales on Realtor.ca
-                                    </a>
-                                </div>
 
                                 <div className="flex gap-4 pt-4 no-print">
                                     <button
