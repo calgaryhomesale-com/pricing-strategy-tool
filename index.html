@@ -4,17 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Pricing Strategy Tool - Canadian Real Estate</title>
-    
-    <!-- React and ReactDOM from CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel Standalone for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <style>
         body {
             margin: 0;
@@ -24,7 +17,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        
+
         @media print {
             .no-print {
                 display: none;
@@ -34,7 +27,6 @@
 </head>
 <body>
     <div id="root"></div>
-
     <script type="text/babel">
         const { useState } = React;
 
@@ -44,60 +36,52 @@
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
         );
-
         const ChevronLeft = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
         );
-
         const Home = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
         );
-
         const TrendingUp = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
         );
-
         const DollarSign = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         );
-
         const Users = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
         );
-
         const Search = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
         );
-
         const Info = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         );
-
         const Database = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
             </svg>
         );
-
+        
         // Utility function to generate targeted search queries
         const getSearchPrompts = (city, propertyType) => {
             const safeCity = city || '[Your City]';
             const safePropertyType = propertyType || '[Property Type]';
-            
+
             return [
                 {
                     id: 'snlr',
@@ -112,10 +96,11 @@
                     description: "Typical time to sell. Impacts pricing urgency."
                 },
                 {
-                    id: 'cityListings',
-                    title: "Total Active Listings (City)",
+                    // MODIFIED/RENAMED for nearby competition
+                    id: 'nearbyCompetition', 
+                    title: "Nearby Active Listings (Competition)",
                     query: `"${safeCity}" current active listings ${safePropertyType} realtor.ca`,
-                    description: "Current number of competitors in the city."
+                    description: "Current number of similar competitors in your direct area (Neighborhood level count is best)."
                 },
                 {
                     id: 'citySales30Days',
@@ -179,43 +164,9 @@
               type: 'text',
               placeholder: 'e.g., 1,500 sq ft, 2 bed/2 bath'
             },
-            {
-              id: 'marketCondition',
-              title: 'What are the current market conditions in your area?',
-              icon: TrendingUp,
-              type: 'select',
-              options: [
-                'Hot Seller\'s Market (Multiple offers, homes selling fast)',
-                'Balanced Market (Normal activity, reasonable time to sell)',
-                'Buyer\'s Market (Inventory high, longer days on market)',
-                'Uncertain/Transitioning',
-              ],
-            },
-            {
-              id: 'daysOnMarket',
-              title: 'What is the average days on market (DOM) for similar homes?',
-              icon: TrendingUp,
-              type: 'select',
-              options: [
-                'Under 7 days',
-                '7-14 days',
-                '15-30 days',
-                '31-60 days',
-                'Over 60 days',
-              ],
-            },
-            {
-              id: 'competition',
-              title: 'How many similar properties are currently listed nearby?',
-              icon: TrendingUp,
-              type: 'select',
-              options: [
-                'None or very few (1-2)',
-                'Some competition (3-5)',
-                'Moderate competition (6-10)',
-                'Heavy competition (11+)',
-              ],
-            },
+            // REMOVED: marketCondition - now derived from SNLR
+            // REMOVED: daysOnMarket - now derived from avgDOM
+            // REMOVED: competition - now a raw data input
             {
               id: 'comparablesSold',
               title: 'Have you found reliable comparable sales (comps) from the last 3-6 months?',
@@ -272,7 +223,7 @@
         // Market Data Input Component
         const MarketDataInputForm = ({ city, propertyType, rawMarketData, setRawMarketData }) => {
             const marketPrompts = getSearchPrompts(city, propertyType);
-            
+
             const handleRawDataChange = (id, value) => {
                 setRawMarketData(prev => ({
                     ...prev,
@@ -310,7 +261,7 @@
                                     {prompt.title}
                                 </h4>
                                 <p className="text-sm text-gray-600 mb-3">{prompt.description}</p>
-                                
+
                                 {getInputType(prompt.id) === 'number' && (
                                      <input
                                         type="text"
@@ -333,7 +284,7 @@
                                         ))}
                                     </select>
                                 )}
-                                
+
                                 <a
                                     href={`https://www.google.com/search?q=${encodeURIComponent(prompt.query)}`}
                                     target="_blank"
@@ -358,7 +309,7 @@
           const [rawMarketData, setRawMarketData] = useState({
             snlr: '',
             avgDOM: '',
-            cityListings: '',
+            nearbyCompetition: '', // Changed from cityListings
             citySales30Days: '',
             priceTrend90Days: ''
           });
@@ -388,7 +339,7 @@
             setRawMarketData({
               snlr: '',
               avgDOM: '',
-              cityListings: '',
+              nearbyCompetition: '',
               citySales30Days: '',
               priceTrend90Days: ''
             });
@@ -399,13 +350,10 @@
               sellingTechnique,
               propertyCondition,
               urgency,
-              competition,
               comparablesSold,
-              marketCondition: mcAnswer,
-              daysOnMarket: domAnswer
             } = answers;
 
-            const { snlr: rawSNLR, avgDOM: rawAvgDOM, priceTrend90Days: rawTrend } = rawMarketData;
+            const { snlr: rawSNLR, avgDOM: rawAvgDOM, priceTrend90Days: rawTrend, nearbyCompetition: rawCompetition } = rawMarketData;
 
             let strategy = {
               approach: '',
@@ -413,37 +361,38 @@
               reasoning: [],
               tactics: [],
               risks: [],
-              marketSource: '',
-              marketConditionText: '',
-              daysOnMarketText: ''
+              marketSource: 'Based on Raw Data',
+              marketConditionText: 'N/A',
+              daysOnMarketText: 'N/A',
+              feeRange: { min: 0, max: 0, applies: false, feeType: 'No Commission' },
+              netDiscountRange: { min: 0, max: 0 },
+              minDiscount: 0, // Used for internal calculation
+              maxDiscount: 0  // Used for internal calculation
             };
 
             // Market Condition & DOM Logic
             let isHotMarket = false;
             let isBuyersMarket = false;
-            let marketConditionText = mcAnswer;
-            let daysOnMarketText = domAnswer;
-            
+            let marketConditionText = 'Balanced Market (Default)';
+            let daysOnMarketText = 'N/A';
+
             // 1. Determine Market Type from SNLR
             const snlr = parseFloat(rawSNLR);
             if (!isNaN(snlr) && snlr > 0) {
-                strategy.marketSource = 'Based on Raw Data (SNLR & Avg DOM)';
                 if (snlr > 0.6) {
                     isHotMarket = true;
-                    marketConditionText = 'Hot Seller\'s Market (Derived from SNLR > 0.6)';
+                    marketConditionText = 'Hot Seller\'s Market (SNLR > 0.6)';
                 } else if (snlr < 0.4) {
                     isBuyersMarket = true;
-                    marketConditionText = 'Buyer\'s Market (Derived from SNLR < 0.4)';
+                    marketConditionText = 'Buyer\'s Market (SNLR < 0.4)';
                 } else {
-                    marketConditionText = 'Balanced Market (Derived from 0.4 < SNLR < 0.6)';
+                    marketConditionText = 'Balanced Market (0.4 < SNLR < 0.6)';
                 }
             } else {
-                strategy.marketSource = 'Based on User Selection';
-                isHotMarket = mcAnswer?.includes('Hot Seller');
-                isBuyersMarket = mcAnswer?.includes('Buyer\'s Market');
+                marketConditionText = 'Market type could not be determined from SNLR. Defaulting to Balanced.';
             }
 
-            // 2. Determine DOM from raw input
+            // 2. Determine DOM from raw input and set text
             const dom = parseFloat(rawAvgDOM);
             if (!isNaN(dom) && dom > 0) {
                 if (dom < 7) daysOnMarketText = 'Under 7 days';
@@ -451,37 +400,41 @@
                 else if (dom <= 30) daysOnMarketText = '15-30 days';
                 else if (dom <= 60) daysOnMarketText = '31-60 days';
                 else daysOnMarketText = 'Over 60 days';
-                
-                if (strategy.marketSource.includes('User Selection')) {
-                    if (dom < 10) isHotMarket = true;
-                    if (dom > 60) isBuyersMarket = true;
-                }
+
+                if (dom < 10) isHotMarket = true;
+                if (dom > 60) isBuyersMarket = true;
             } else {
-                if (domAnswer) {
-                    if (domAnswer.includes('Under 7')) isHotMarket = true;
-                    if (domAnswer.includes('Over 60')) isBuyersMarket = true;
+                daysOnMarketText = 'N/A - Average Days on Market not provided.';
+            }
+
+            // 3. Determine Competition Level from raw input
+            let highCompetition = false;
+            const competitionCount = parseFloat(rawCompetition);
+            if (!isNaN(competitionCount)) {
+                // Using 6+ as the threshold for high/moderate competition based on old options
+                if (competitionCount >= 6) { 
+                    highCompetition = true; 
                 }
             }
             
-            const isBalanced = !isHotMarket && !isBuyersMarket;
-            
-            strategy.marketConditionText = marketConditionText;
-            strategy.daysOnMarketText = daysOnMarketText;
 
-            // Off-market vs MLS considerations
             const isOffMarket = sellingTechnique?.includes('Off-Market');
             const isMLSListing = sellingTechnique?.includes('Traditional MLS');
 
-            // Urgency, Condition, Competition factors
+            // Urgency, Condition factors
             const isUrgent = urgency?.includes('Very urgent') || urgency?.includes('Moderately urgent');
             const isExcellentCondition = propertyCondition?.includes('Excellent');
             const isPoorCondition = propertyCondition?.includes('Poor') || propertyCondition?.includes('Fixer-upper');
-            const highCompetition = competition?.includes('Heavy') || competition?.includes('Moderate');
+            
+            strategy.marketConditionText = marketConditionText;
+            strategy.daysOnMarketText = daysOnMarketText;
 
             // PRICING STRATEGY LOGIC
             if (isOffMarket) {
               strategy.approach = 'Below Market Value Pricing (Investor Focus)';
               strategy.percentage = '75-85% of estimated market value';
+              strategy.minDiscount = 15; // 100% - 85% = 15% discount
+              strategy.maxDiscount = 25; // 100% - 75% = 25% discount
               strategy.reasoning.push(
                 'Off-market deals require significant discounting for speed, certainty, and lack of marketing.',
                 'The buyer pool is limited, meaning less competition for the property.'
@@ -498,6 +451,8 @@
             } else if (isHotMarket && isMLSListing) {
               strategy.approach = 'Under-Pricing Strategy (Create a Bidding War)';
               strategy.percentage = '5-10% below estimated market value';
+              strategy.minDiscount = 5;
+              strategy.maxDiscount = 10;
               strategy.reasoning.push(
                 'A hot market with low inventory is perfect for generating a competitive bidding environment.',
                 `Low days on market (${daysOnMarketText}) indicates high buyer demand that can be leveraged.`,
@@ -516,6 +471,8 @@
             } else if (isBuyersMarket || highCompetition) {
               strategy.approach = 'Competitive Market Pricing (Aggressive Positioning)';
               strategy.percentage = 'At or 2-5% below market value';
+              strategy.minDiscount = 0;
+              strategy.maxDiscount = 5;
               strategy.reasoning.push(
                 'High inventory or slow DOM means buyers have many choices; price must be competitive from day one.',
                 'Overpricing will result in the property sitting and becoming stale.',
@@ -534,6 +491,8 @@
             } else {
               strategy.approach = 'Market Value Pricing (Evidence-Based)';
               strategy.percentage = 'At estimated market value';
+              strategy.minDiscount = 0;
+              strategy.maxDiscount = 3; // Allowing for small negotiation room 
               strategy.reasoning.push(
                 'A balanced market allows for fair, accurate valuation based solely on comparable sales (comps).',
                 'The goal is to align price with market expectation and property quality.'
@@ -552,6 +511,8 @@
             // ADJUSTMENTS FOR SPECIAL CONDITIONS
             if (isUrgent && !isOffMarket) {
               strategy.reasoning.push('Urgent timeline: Requires an extra 3-5% discount below the determined strategy to ensure immediate action.');
+              strategy.maxDiscount += 5;
+              strategy.minDiscount += 3;
             }
 
             if (isPoorCondition) {
@@ -563,8 +524,9 @@
             }
 
             if (isExcellentCondition && !isOffMarket) {
-              strategy.reasoning.push('Excellent condition allows for premium positioning.');
+              strategy.reasoning.push('Excellent condition allows for premium positioning. Do not undercut your strategy.');
               strategy.tactics.push('Can price at top of comparable range or slightly above.');
+              strategy.minDiscount = Math.max(0, strategy.minDiscount - 1);
             }
 
             if (comparablesSold?.includes('No - Hard') || comparablesSold?.includes('Limited')) {
@@ -575,6 +537,44 @@
               );
               strategy.risks.push('Difficult to defend pricing without strong comps.');
             }
+
+            // FEES/NET TO SELLER CALCULATION
+            let feeRange = { min: 0, max: 0, applies: false, feeType: 'No Commission' };
+
+            if (sellingTechnique?.includes('Traditional MLS') || sellingTechnique?.includes('Hybrid')) {
+                // Standard commission + legal: typically 3.5% to 5% in Canada. Using 3-5% for simplicity.
+                feeRange = { min: 3, max: 5, applies: true, feeType: 'Standard MLS Commission/Fees' }; 
+            } else if (sellingTechnique?.includes('Auction')) {
+                 // Auction fees can be high
+                 feeRange = { min: 5, max: 8, applies: true, feeType: 'Auction Fees/Commissions' };
+            } else if (sellingTechnique?.includes('For Sale By Owner')) {
+                // Legal, admin fees, potential small buyer agent commission. Using 0.5-2%.
+                feeRange = { min: 0.5, max: 2, applies: true, feeType: 'Legal/Admin Fees Only' };
+            } else if (sellingTechnique?.includes('Off-Market')) {
+                // Legal, admin fees, potential small finder's fee. Using 1-3%.
+                feeRange = { min: 1, max: 3, applies: true, feeType: 'Low Transaction/Finder Fees' };
+            }
+
+            // Calculate Net to Seller impact (Discount + Fees)
+            // Ensure min discount doesn't go below 0 (though theoretically it could if pricing ABOVE market value)
+            strategy.minDiscount = Math.max(0, strategy.minDiscount); 
+            
+            const netMin = strategy.minDiscount + feeRange.min; 
+            const netMax = strategy.maxDiscount + feeRange.max;
+
+            strategy.feeRange = feeRange;
+            strategy.netDiscountRange = { min: netMin, max: netMax };
+            
+            // Format percentage string cleanly for the final display
+            if (strategy.approach.includes('Below Market Value Pricing')) {
+                // Convert back from discount range (15-25%) to listing range (75-85% of market value)
+                strategy.percentage = `${100 - strategy.maxDiscount}% - ${100 - strategy.minDiscount}% of estimated market value`;
+            } else if (strategy.approach.includes('Market Value Pricing')) {
+                 strategy.percentage = 'At or slightly below estimated market value (0-3% below)';
+            } else {
+                 strategy.percentage = `${strategy.minDiscount}-${strategy.maxDiscount}% below estimated market value`;
+            }
+
 
             return strategy;
           };
@@ -601,7 +601,6 @@
                   </div>
 
                   <div className="space-y-6">
-                    
                     {/* Market Insights Summary */}
                      <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
                         <h3 className="text-xl font-bold text-blue-900 mb-2">Market Insights</h3>
@@ -611,15 +610,32 @@
                             <li><span className='font-bold'>Average DOM:</span> {strategy.daysOnMarketText}</li>
                             <li><span className='font-bold'>SNLR:</span> {rawMarketData.snlr || 'N/A'}</li>
                             <li><span className='font-bold'>Price Trend:</span> {rawMarketData.priceTrend90Days || 'N/A'}</li>
-                            <li><span className='font-bold'>City Listings:</span> {rawMarketData.cityListings || 'N/A'} (Sales: {rawMarketData.citySales30Days || 'N/A'})</li>
+                            <li><span className='font-bold'>Nearby Listings:</span> {rawMarketData.nearbyCompetition || 'N/A'} (Sales Last 30 Days: {rawMarketData.citySales30Days || 'N/A'})</li>
                         </ul>
                     </div>
 
-                    {/* Main Strategy */}
+                    {/* Main Strategy & Net to Seller (Clutter Minimized) */}
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-6 rounded-r-lg">
                       <h3 className="text-xl font-bold text-green-900 mb-2">Recommended Approach</h3>
                       <p className="text-2xl font-semibold text-green-700 mb-2">{strategy.approach}</p>
-                      <p className="text-xl text-green-600">Target Pricing: {strategy.percentage}</p>
+                      <p className="text-xl text-green-600">Target Listing Price: {strategy.percentage}</p>
+                      
+                      {/* NET TO SELLER CALCULATION */}
+                      <div className="mt-4 pt-4 border-t border-green-200">
+                        <h4 className="text-lg font-bold text-green-800 flex items-center mb-1">
+                          <DollarSign className="w-5 h-5 mr-1" /> Estimated Net-to-Seller Impact
+                        </h4>
+                        <p className="text-base text-green-700">
+                          <span className='font-semibold'>Total Expected Reduction:</span> 
+                          {strategy.netDiscountRange.min}% - {strategy.netDiscountRange.max}% off potential Market Value
+                        </p>
+                        <p className="text-sm text-green-600 mt-2">
+                            <span className='font-bold'>Breakdown:</span> (Price Discount/Negotiation) + ({strategy.feeRange.min}%-{strategy.feeRange.max}% {strategy.feeRange.feeType})
+                        </p>
+                        <p className='text-xs text-green-500 mt-1'>
+                            *This is the estimated total cost/discount (price reduction + fees) when compared to 100% of estimated market value.
+                        </p>
+                      </div>
                     </div>
 
                     {/* Reasoning */}
@@ -662,7 +678,7 @@
                         </ul>
                       </div>
                     )}
-                    
+
                     {/* Recommended Searches */}
                     <div className="bg-gray-50 border border-gray-200 p-6 rounded-lg">
                       <h3 className="text-lg font-bold text-gray-800 mb-3">Critical Next Step: Find Comparable Sales (Comps)</h3>
@@ -681,15 +697,17 @@
                     <div className="flex gap-4 pt-4 no-print">
                       <button
                         onClick={restart}
-                        className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors bg-gray-600 text-white hover:bg-gray-700"
                       >
-                        Start New Assessment
+                        <Home className="w-5 h-5" />
+                        Start New Strategy
                       </button>
                       <button
                         onClick={() => window.print()}
-                        className="flex-1 bg-gray-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-700 transition-colors"
+                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors bg-blue-600 text-white hover:bg-blue-700"
                       >
-                        Print Results
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m0 0h10m0 0v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2m6-10H8a2 2 0 00-2 2v4a2 2 0 002 2h4l4-4V7a2 2 0 00-2-2z" /></svg>
+                        Print/Save PDF
                       </button>
                     </div>
                   </div>
@@ -698,97 +716,72 @@
             );
           }
 
-          // Question View
+          // Question/Input View
           return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-8">
-              <div className="max-w-2xl mx-auto">
-                {/* Header */}
-                <div className="text-center mb-8">
-                  <h1 className="text-4xl font-bold text-gray-800 mb-2">Home Pricing Strategy Tool</h1>
-                  <p className="text-gray-600">Canadian Real Estate Market Analysis</p>
-                </div>
-
-                {/* Progress Bar */}
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-8 flex items-center justify-center">
+              <div className="max-w-xl w-full mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-10">
                 <div className="mb-8">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-600">
-                      Question {step + 1} of {questions.length}
-                    </span>
-                    <span className="text-sm font-medium text-gray-600">{Math.round(progress)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
+                  <h1 className="text-3xl font-extrabold text-gray-800 mb-2 flex items-center">
+                    <DollarSign className="w-8 h-8 text-blue-600 mr-2" />
+                    Home Pricing Strategy Tool
+                  </h1>
+                  <p className="text-gray-600 text-sm">Canadian Real Estate | Step {step + 1} of {questions.length}</p>
+                  <div className="mt-4 bg-gray-200 rounded-full h-2.5">
                     <div
-                      className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
                       style={{ width: `${progress}%` }}
-                    />
+                    ></div>
                   </div>
                 </div>
 
-                {/* Question Card */}
-                <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-                  <div className="flex items-center mb-6">
-                    {Icon && (
-                      <div className="p-3 bg-blue-100 rounded-lg mr-4">
-                        <Icon className="w-8 h-8 text-blue-600" />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <h2 className="text-2xl font-bold text-gray-800">{currentQuestion.title}</h2>
-                      {currentQuestion.id === 'marketCondition' && (
-                          <p className="text-sm text-blue-600 mt-1 flex items-center">
-                              <Info className="w-4 h-4 mr-1" />
-                              Tip: Confirm this answer using the SNLR in the data section below.
-                          </p>
-                      )}
-                    </div>
-                  </div>
+                {/* Current Question Block */}
+                <div className="bg-white rounded-xl p-0">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-start">
+                    {Icon && <Icon className="w-6 h-6 text-blue-600 mr-3 mt-1 flex-shrink-0" />}
+                    {currentQuestion.title}
+                  </h2>
 
-                  {currentQuestion.type === 'text' ? (
-                    <input
-                      type="text"
-                      value={answers[currentQuestion.id] || ''}
-                      onChange={(e) => handleAnswer(currentQuestion.id, e.target.value)}
-                      placeholder={currentQuestion.placeholder}
-                      className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-600 focus:outline-none text-gray-800"
-                    />
-                  ) : (
+                  {currentQuestion.type === 'select' && (
                     <div className="space-y-3">
                       {currentQuestion.options.map((option) => (
                         <button
                           key={option}
                           onClick={() => handleAnswer(currentQuestion.id, option)}
-                          className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                            answers[currentQuestion.id] === option
-                              ? 'border-blue-600 bg-blue-50 shadow-md'
-                              : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                          }`}
+                          className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 
+                            ${answers[currentQuestion.id] === option
+                              ? 'bg-blue-100 border-blue-600 text-blue-800 font-semibold'
+                              : 'bg-gray-50 border-gray-300 hover:bg-gray-100 text-gray-700'
+                            }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-gray-800">{option}</span>
-                            {answers[currentQuestion.id] === option && (
-                              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                                <span className="text-white text-sm">✓</span>
-                              </div>
-                            )}
-                          </div>
+                          {option}
                         </button>
                       ))}
                     </div>
                   )}
+
+                  {currentQuestion.type === 'text' && (
+                    <input
+                      type="text"
+                      value={answers[currentQuestion.id] || ''}
+                      onChange={(e) => handleAnswer(currentQuestion.id, e.target.value)}
+                      placeholder={currentQuestion.placeholder}
+                      className="w-full p-4 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none text-gray-800"
+                    />
+                  )}
                 </div>
-                
-                {/* Conditional Market Data Input Form (Steps 4 onwards) */}
+
+                {/* Market Data Input Section after core questions are answered */}
                 {step >= 3 && (
                     <MarketDataInputForm 
-                        city={answers.city}
+                        city={answers.city} 
                         propertyType={answers.propertyType}
-                        rawMarketData={rawMarketData}
-                        setRawMarketData={setRawMarketData}
+                        rawMarketData={rawMarketData} 
+                        setRawMarketData={setRawMarketData} 
                     />
                 )}
 
                 {/* Navigation Buttons */}
-                <div className="flex gap-4 mt-6">
+                <div className="flex gap-4 pt-8">
                   <button
                     onClick={prevStep}
                     disabled={step === 0}
@@ -811,7 +804,7 @@
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                   >
-                    {step === questions.length - 1 ? 'Get Results' : 'Next'}
+                    {step === questions.length - 1 ? 'Calculate Strategy' : 'Next'}
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
@@ -820,9 +813,7 @@
           );
         }
 
-        // Render the app
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<HomePricingTool />);
+        ReactDOM.render(<HomePricingTool />, document.getElementById('root'));
     </script>
 </body>
 </html>
