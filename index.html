@@ -99,13 +99,15 @@
                 {
                     id: 'nearbyCompetition', 
                     title: "Nearby Active Listings (Competition)",
-                    query: `"${safeCity}" current active listings ${safePropertyType} realtor.ca`,
+                    // UPDATED QUERY
+                    query: `how many "${safeCity}" current active listings ${safePropertyType} AI overview`,
                     description: "Current number of similar competitors in your direct area (Neighborhood level count is best)."
                 },
                 {
                     id: 'citySales30Days',
                     title: "Total Sales (Last 30 Days)",
-                    query: `"${safeCity}" sold listings last 30 days ${safePropertyType} statistics`,
+                    // UPDATED QUERY
+                    query: `how many ${safePropertyType} "${safeCity}" sold listings last 30 days AI overview`,
                     description: "Recent transaction volume. Shows demand."
                 },
                 {
@@ -147,13 +149,7 @@
               type: 'text',
               placeholder: 'e.g., 1,500 sq ft, 2 bed/2 bath'
             },
-            {
-              id: 'comparablesSold',
-              title: 'Have you found reliable comparable sales (comps) from the last 3-6 months?',
-              icon: DollarSign,
-              type: 'select',
-              options: ['Yes - Multiple strong comps (3+)', 'Yes - A few comps (1-2)', 'Limited comps available (0)', 'No - Hard to find comparables'],
-            },
+            // REMOVED: comparablesSold question
             {
               id: 'propertyCondition',
               title: 'What is the property condition?',
@@ -277,8 +273,10 @@
             });
 
             const PROPERTY_INFO_COUNT = 4;
-            const STRATEGY_INFO_COUNT = questions.length - PROPERTY_INFO_COUNT;
+            // UPDATED COUNT: 7 questions total - 4 property info = 3 strategy questions
+            const STRATEGY_INFO_COUNT = 3; 
             const MARKET_DATA_STEP_INDEX = PROPERTY_INFO_COUNT;
+            // UPDATED COUNT: 4 property + 1 market data + 3 strategy = 8 steps
             const TOTAL_STEPS = PROPERTY_INFO_COUNT + 1 + STRATEGY_INFO_COUNT;
 
             const handleAnswer = (questionId, value) => {
@@ -311,7 +309,8 @@
             };
 
             const calculatePricingStrategy = () => {
-                const { sellingTechnique, propertyCondition, urgency, comparablesSold } = answers;
+                // REMOVED 'comparablesSold' from answers destructuring
+                const { sellingTechnique, propertyCondition, urgency } = answers;
                 const { snlr: rawSNLR, avgDOM: rawAvgDOM, priceTrend90Days: rawTrend, nearbyCompetition: rawCompetition } = rawMarketData;
 
                 let strategy = {
@@ -326,7 +325,9 @@
                     feeRange: { min: 0, max: 0, applies: false, feeType: 'No Commission' },
                     netDiscountRange: { min: 0, max: 0 },
                     minDiscount: 0, 
-                    maxDiscount: 0  
+                    maxDiscount: 0,
+                    // NEW: Timeframe strategy suggestion
+                    timeframeOption: { suggestion: '', reason: [] }
                 };
 
                 let isHotMarket = false;
@@ -378,6 +379,7 @@
                 strategy.marketConditionText = marketConditionText;
                 strategy.daysOnMarketText = daysOnMarketText;
 
+                // --- 1. DETERMINE CORE PRICING STRATEGY ---
                 if (isOffMarket) {
                     strategy.approach = 'Below Market Value Pricing (Investor Focus)';
                     strategy.minDiscount = 15; 
@@ -414,6 +416,7 @@
                     );
                 }
 
+                // --- 2. APPLY URGENCY MODIFIER ---
                 if (isUrgent && !isOffMarket) {
                     strategy.reasoning.push('Urgent timeline: Requires an extra 3-5% discount below the determined strategy to ensure immediate action.');
                     strategy.maxDiscount += 5;
@@ -423,6 +426,31 @@
                     strategy.reasoning.push('Property condition requires significant discount for repairs.');
                 }
 
+                // --- 3. DETERMINE BEST TIMEFRAME OPTION (NEW) ---
+                let timeframeOption = {
+                    suggestion: '',
+                    reason: []
+                };
+
+                if (urgency?.includes('Very urgent')) {
+                    timeframeOption.suggestion = 'Aggressive Under-Pricing (5-10% below Comps) OR Off-Market Deal';
+                    timeframeOption.reason.push("Your goal is to sell in under 30 days, which requires a price that immediately captures the attention of high-urgency buyers or investors. Only an extremely compelling price, or an investor deal, will guarantee this timeline.");
+                } else if (urgency?.includes('Moderately urgent')) {
+                    timeframeOption.suggestion = isBuyersMarket || highCompetition ? 'Competitive Market Pricing (0-5% below Comps)' : 'Under-Pricing Strategy (3-7% below Comps)';
+                    timeframeOption.reason.push("A 30-60 day window is achievable with strong competitive pricing. If the market is slow, price aggressively.");
+                } else if (urgency?.includes('Normal timeline')) {
+                    timeframeOption.suggestion = 'Market Value Pricing (0-3% below Comps)';
+                    timeframeOption.reason.push("A 60-90 day timeline aligns perfectly with a well-researched market value price, allowing time for market exposure and negotiations.");
+                } else if (urgency?.includes('Flexible') || urgency?.includes('No rush')) {
+                    timeframeOption.suggestion = 'Patience/Premium Pricing (Start at Market Value or up to 5% OVER)';
+                    timeframeOption.reason.push("With a flexible timeline, you can prioritize price over speed. Start strong and wait for the buyer willing to pay a premium. The market will tell you if a price reduction is needed after 30 days.");
+                } else {
+                    timeframeOption.suggestion = 'A Balanced Market Value strategy is the default recommendation.';
+                    timeframeOption.reason.push("No specific urgency was noted.");
+                }
+                strategy.timeframeOption = timeframeOption;
+
+                // --- 4. CALCULATE FEES AND NET IMPACT ---
                 let feeRange = { min: 0, max: 0, applies: false, feeType: 'No Commission' };
 
                 if (sellingTechnique?.includes('Traditional MLS') || sellingTechnique?.includes('Hybrid')) {
@@ -479,6 +507,7 @@
                             </div>
 
                             <div className="space-y-6">
+                                {/* MARKET INSIGHTS */}
                                 <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
                                     <h3 className="text-xl font-bold text-blue-900 mb-2">Market Insights</h3>
                                     <p className='text-sm text-blue-800 font-semibold mb-2'>{strategy.marketSource}</p>
@@ -490,9 +519,23 @@
                                         <li><span className='font-bold'>Nearby Listings:</span> {rawMarketData.nearbyCompetition || 'N/A'} (Sales Last 30 Days: {rawMarketData.citySales30Days || 'N/A'})</li>
                                     </ul>
                                 </div>
+                                
+                                {/* TIMEFRAME STRATEGY (NEW BLOCK) */}
+                                <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
+                                    <h3 className="text-xl font-bold text-yellow-900 mb-2">Best Option for Your Timeframe ({answers.urgency})</h3>
+                                    <p className="text-xl font-semibold text-yellow-700 mb-2">{strategy.timeframeOption.suggestion}</p>
+                                    <div className="mt-4 pt-4 border-t border-yellow-200">
+                                        <h4 className="text-base font-bold text-yellow-800 mb-1">Reasoning:</h4>
+                                        <ul className="space-y-1 text-yellow-800 text-sm">
+                                            {strategy.timeframeOption.reason.map((r, idx) => <li key={idx} className="flex items-start"><span className="text-yellow-500 mr-2 mt-1">•</span>{r}</li>)}
+                                        </ul>
+                                    </div>
+                                </div>
 
+
+                                {/* PRICING APPROACH */}
                                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-6 rounded-r-lg">
-                                    <h3 className="text-xl font-bold text-green-900 mb-2">Recommended Approach</h3>
+                                    <h3 className="text-xl font-bold text-green-900 mb-2">Recommended Pricing Approach</h3>
                                     <p className="text-2xl font-semibold text-green-700 mb-2">{strategy.approach}</p>
                                     <p className="text-xl text-green-600">Target Listing Price: {strategy.percentage}</p>
                                     
@@ -587,7 +630,7 @@
                             {currentQuestion.title}
                         </h2>
 
-                        {/* MODIFIED: Changed selection buttons to a standard dropdown for cleaner interface */}
+                        {/* Dropdown Selection for 'select' type questions */}
                         {currentQuestion.type === 'select' && (
                             <div className="relative">
                                 <select
@@ -602,7 +645,6 @@
                                         </option>
                                     ))}
                                 </select>
-                                {/* Custom Chevron Down Icon for visual appeal (hides default browser chevron) */}
                                 <svg className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
