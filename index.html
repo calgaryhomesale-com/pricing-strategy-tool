@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Pricing Strategy Tool - Canadian Real Estate</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -30,7 +29,7 @@
     <script type="text/babel">
         const { useState } = React;
 
-        // Lucide React Icons (simplified inline versions)
+        // --- Icon Definitions (Simplified) ---
         const ChevronRight = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -44,11 +43,6 @@
         const Home = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-        );
-        const TrendingUp = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
         );
         const DollarSign = ({ className }) => (
@@ -66,18 +60,13 @@
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
         );
-        const Info = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-        );
         const Database = ({ className }) => (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
             </svg>
         );
         
-        // Utility function to generate targeted search queries
+        // --- Utility function to generate targeted search queries ---
         const getSearchPrompts = (city, propertyType) => {
             const safeCity = city || '[Your City]';
             const safePropertyType = propertyType || '[Property Type]';
@@ -86,17 +75,18 @@
                 {
                     id: 'snlr',
                     title: "Sales-to-New-Listings Ratio (SNLR)",
-                    query: `Sales to new listings ratio "${safeCity}" real estate board`,
-                    description: "The percentage of new listings that result in a sale. Crucial for Market Condition."
+                    // UX Improvement: Add "AI overview" to prompt concise data
+                    query: `Sales to new listings ratio "${safeCity}" real estate board statistics AI overview`, 
+                    description: "The percentage of new listings that result in a sale. Crucial for Market Condition. (Enter as decimal: 0.75 for 75%)" 
                 },
                 {
                     id: 'avgDOM',
                     title: "Average Days on Market (DOM)",
-                    query: `Median days on market "${safeCity}" ${safePropertyType}`,
+                    // UX Improvement: Add "AI overview" to prompt concise data
+                    query: `Median days on market "${safeCity}" ${safePropertyType} statistics AI overview`,
                     description: "Typical time to sell. Impacts pricing urgency."
                 },
                 {
-                    // MODIFIED/RENAMED for nearby competition
                     id: 'nearbyCompetition', 
                     title: "Nearby Active Listings (Competition)",
                     query: `"${safeCity}" current active listings ${safePropertyType} realtor.ca`,
@@ -164,7 +154,7 @@
               type: 'text',
               placeholder: 'e.g., 1,500 sq ft, 2 bed/2 bath'
             },
-            // MARKET DATA STEP INSERTED HERE (INDEX 4)
+            // MARKET DATA INPUT OCCURS AT STEP 5 (INDEX 4)
             {
               id: 'comparablesSold',
               title: 'Have you found reliable comparable sales (comps) from the last 3-6 months?',
@@ -218,7 +208,7 @@
             },
           ];
 
-        // Market Data Input Component
+        // --- Market Data Input Component (UX Focused) ---
         const MarketDataInputForm = ({ city, propertyType, rawMarketData, setRawMarketData }) => {
             const marketPrompts = getSearchPrompts(city, propertyType);
 
@@ -238,10 +228,14 @@
 
             const getInputType = (id) => {
                 if (id === 'priceTrend90Days') return 'select';
-                // snlr and nearbyCompetition can be decimals or numbers
-                if (id === 'snlr') return 'number';
                 return 'number';
             };
+            
+            const getPlaceholder = (id) => {
+                if (id === 'snlr') return 'e.g., 0.75 (for 75%)';
+                if (id === 'avgDOM') return 'e.g., 21 (for 21 days)';
+                return 'Enter number';
+            }
 
             return (
                 <div className="bg-white rounded-2xl shadow-xl p-0">
@@ -250,24 +244,43 @@
                         Input Market Data
                     </h3>
                     <p className="text-gray-600 mb-6">
-                        Use the Google Search links to find the current statistics for {city || 'your area'}, then enter the raw data below. This data will be used to calculate your strategy.
+                        Use the search tools below to quickly find the current statistics for {city || 'your area'}, then enter the raw data here.
                     </p>
 
                     <div className="space-y-6">
                         {marketPrompts.map((prompt) => (
                             <div key={prompt.id} className="border-b pb-4 last:border-b-0">
-                                <h4 className="font-semibold text-gray-800 flex items-center mb-2">
+                                <h4 className="font-semibold text-gray-800 mb-2">
                                     {prompt.title}
                                 </h4>
-                                <p className="text-sm text-gray-600 mb-3">{prompt.description}</p>
+                                <p className="text-sm text-gray-600 mb-2">{prompt.description}</p>
+
+                                <a
+                                    href={`https://www.google.com/search?q=${encodeURIComponent(prompt.query)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    // UX: More prominent, action-oriented button style
+                                    className="text-sm p-2 bg-blue-100 border border-blue-300 text-blue-800 hover:bg-blue-200 rounded-lg flex items-center justify-center font-medium mb-3 transition-colors"
+                                >
+                                    <Search className="w-4 h-4 mr-2" />
+                                    🔍 Google Search for AI Overview Data
+                                </a>
+                                
+                                {/* UX: Clear instructions on where to look */}
+                                {getInputType(prompt.id) === 'number' && (
+                                    <p className="text-xs text-gray-500 mb-2">
+                                        **Tip:** After clicking, look for the **AI Overview** at the top of the search results and paste the corresponding **number** below.
+                                    </p>
+                                )}
 
                                 {getInputType(prompt.id) === 'number' && (
                                      <input
                                         type="text"
                                         value={rawMarketData[prompt.id]}
+                                        // Ensure input is cleaned to only accept numbers/decimals
                                         onChange={(e) => handleRawDataChange(prompt.id, e.target.value.replace(/[^0-9.]/g, ''))}
-                                        placeholder={prompt.id === 'snlr' ? 'e.g., 0.75 (for 75%)' : 'Enter number'}
-                                        className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-600 focus:outline-none text-gray-800 mb-3"
+                                        placeholder={getPlaceholder(prompt.id)}
+                                        className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-600 focus:outline-none text-gray-800"
                                     />
                                 )}
 
@@ -275,7 +288,7 @@
                                     <select
                                         value={rawMarketData[prompt.id]}
                                         onChange={(e) => handleRawDataChange(prompt.id, e.target.value)}
-                                        className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-600 focus:outline-none text-gray-800 mb-3 bg-white"
+                                        className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-600 focus:outline-none text-gray-800 bg-white"
                                     >
                                         <option value="" disabled>Select Trend</option>
                                         {getTrendOptions().map(opt => (
@@ -283,16 +296,6 @@
                                         ))}
                                     </select>
                                 )}
-
-                                <a
-                                    href={`https://www.google.com/search?q=${encodeURIComponent(prompt.query)}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
-                                >
-                                    <Search className="w-4 h-4 mr-1" />
-                                    Click to Google Search for this Data
-                                </a>
                             </div>
                         ))}
                     </div>
@@ -300,7 +303,7 @@
             );
         };
 
-        // Main Component
+        // --- Main Component ---
         function HomePricingTool() {
           const [step, setStep] = useState(0);
           const [answers, setAnswers] = useState({});
@@ -314,8 +317,10 @@
           });
 
           // Define step structure
-          const MARKET_DATA_STEP_INDEX = 4;
-          const TOTAL_STEPS = questions.length + 1; // 8 selection questions + 1 market data step = 9
+          const PROPERTY_INFO_COUNT = 4; // City, Neighborhood, Type, Size
+          const STRATEGY_INFO_COUNT = questions.length - PROPERTY_INFO_COUNT; // 4 questions
+          const MARKET_DATA_STEP_INDEX = PROPERTY_INFO_COUNT; // Step 5 (index 4)
+          const TOTAL_STEPS = PROPERTY_INFO_COUNT + 1 + STRATEGY_INFO_COUNT; // 4 questions + 1 market data step + 4 questions = 9
 
           const handleAnswer = (questionId, value) => {
             setAnswers({ ...answers, [questionId]: value });
@@ -369,8 +374,8 @@
               daysOnMarketText: 'N/A',
               feeRange: { min: 0, max: 0, applies: false, feeType: 'No Commission' },
               netDiscountRange: { min: 0, max: 0 },
-              minDiscount: 0, // Used for internal calculation
-              maxDiscount: 0  // Used for internal calculation
+              minDiscount: 0, 
+              maxDiscount: 0  
             };
 
             // Market Condition & DOM Logic
@@ -419,11 +424,9 @@
                 }
             }
             
-
             const isOffMarket = sellingTechnique?.includes('Off-Market');
             const isMLSListing = sellingTechnique?.includes('Traditional MLS');
 
-            // Urgency, Condition factors
             const isUrgent = urgency?.includes('Very urgent') || urgency?.includes('Moderately urgent');
             const isExcellentCondition = propertyCondition?.includes('Excellent');
             const isPoorCondition = propertyCondition?.includes('Poor') || propertyCondition?.includes('Fixer-upper');
@@ -434,25 +437,14 @@
             // PRICING STRATEGY LOGIC
             if (isOffMarket) {
               strategy.approach = 'Below Market Value Pricing (Investor Focus)';
-              strategy.percentage = '75-85% of estimated market value';
-              strategy.minDiscount = 15; // 100% - 85% = 15% discount
-              strategy.maxDiscount = 25; // 100% - 75% = 25% discount
+              strategy.minDiscount = 15; 
+              strategy.maxDiscount = 25; 
               strategy.reasoning.push(
                 'Off-market deals require significant discounting for speed, certainty, and lack of marketing.',
                 'The buyer pool is limited, meaning less competition for the property.'
               );
-              strategy.tactics.push(
-                'Price aggressively (75-80%) for quick cash buyers or investors.',
-                'Emphasize a fast, no-conditions closing to justify the low price.'
-              );
-              strategy.risks.push(
-                'You will likely leave money on the table compared to an open market listing.',
-                'Relies heavily on having a network of motivated buyers.'
-              );
-
             } else if (isHotMarket && isMLSListing) {
               strategy.approach = 'Under-Pricing Strategy (Create a Bidding War)';
-              strategy.percentage = '5-10% below estimated market value';
               strategy.minDiscount = 5;
               strategy.maxDiscount = 10;
               strategy.reasoning.push(
@@ -460,19 +452,8 @@
                 `Low days on market (${daysOnMarketText}) indicates high buyer demand that can be leveraged.`,
                 rawTrend === 'Up' ? 'Prices are trending UP, allowing for aggressive under-pricing to capture peak demand.' : 'The price trend is stable, but high demand warrants this strategy.'
               );
-              strategy.tactics.push(
-                'List 5-10% below comps to attract maximum attention and bids.',
-                'Set a firm offer deadline 5-7 days out.',
-                'Ensure property shows perfectly - staging, photos, etc.'
-              );
-              strategy.risks.push(
-                'If market shifts suddenly, may not get multiple offers.',
-                'Requires excellent property condition to execute well.'
-              );
-
             } else if (isBuyersMarket || highCompetition) {
               strategy.approach = 'Competitive Market Pricing (Aggressive Positioning)';
-              strategy.percentage = 'At or 2-5% below market value';
               strategy.minDiscount = 0;
               strategy.maxDiscount = 5;
               strategy.reasoning.push(
@@ -480,33 +461,13 @@
                 'Overpricing will result in the property sitting and becoming stale.',
                 rawTrend === 'Down' ? 'Prices are trending DOWN, making sharp initial pricing absolutely mandatory.' : 'High inventory requires a compelling price point.'
               );
-              strategy.tactics.push(
-                'Price at the low end or 2-5% below the best comparable sales.',
-                'Be prepared for an immediate price adjustment if showing activity is low in the first 14 days.',
-                'Consider offering incentives (closing cost help, warranties, etc.)'
-              );
-              strategy.risks.push(
-                'May need price reductions if market continues to soften.',
-                'Longer holding costs and carrying expenses.'
-              );
-
             } else {
               strategy.approach = 'Market Value Pricing (Evidence-Based)';
-              strategy.percentage = 'At estimated market value';
               strategy.minDiscount = 0;
-              strategy.maxDiscount = 3; // Allowing for small negotiation room 
+              strategy.maxDiscount = 3; 
               strategy.reasoning.push(
                 'A balanced market allows for fair, accurate valuation based solely on comparable sales (comps).',
                 'The goal is to align price with market expectation and property quality.'
-              );
-              strategy.tactics.push(
-                'Price precisely at the midpoint of your top three most similar comps.',
-                'Build in minimal negotiation room (1-3%) as buyers expect to pay close to asking.',
-                'Monitor market closely for first 2-3 weeks.'
-              );
-              strategy.risks.push(
-                'Market could shift during listing period.',
-                'Need to be responsive to buyer feedback.'
               );
             }
 
@@ -516,47 +477,23 @@
               strategy.maxDiscount += 5;
               strategy.minDiscount += 3;
             }
-
             if (isPoorCondition) {
               strategy.reasoning.push('Property condition requires significant discount for repairs.');
-              strategy.tactics.push(
-                'Reduce price by estimated repair costs plus 10-15% margin.',
-                'Consider marketing to investors and contractors.'
-              );
-            }
-
-            if (isExcellentCondition && !isOffMarket) {
-              strategy.reasoning.push('Excellent condition allows for premium positioning. Do not undercut your strategy.');
-              strategy.tactics.push('Can price at top of comparable range or slightly above.');
-              strategy.minDiscount = Math.max(0, strategy.minDiscount - 1);
-            }
-
-            if (comparablesSold?.includes('No - Hard') || comparablesSold?.includes('Limited')) {
-              strategy.reasoning.push('Lack of comps increases pricing uncertainty.');
-              strategy.tactics.push(
-                'Consider professional appraisal.',
-                'Price conservatively and test market response.'
-              );
-              strategy.risks.push('Difficult to defend pricing without strong comps.');
             }
 
             // FEES/NET TO SELLER CALCULATION
             let feeRange = { min: 0, max: 0, applies: false, feeType: 'No Commission' };
 
             if (sellingTechnique?.includes('Traditional MLS') || sellingTechnique?.includes('Hybrid')) {
-                // Standard commission + legal: typically 3.5% to 5% in Canada.
                 feeRange = { min: 3, max: 5, applies: true, feeType: 'Standard MLS Commission/Fees' }; 
             } else if (sellingTechnique?.includes('Auction')) {
                  feeRange = { min: 5, max: 8, applies: true, feeType: 'Auction Fees/Commissions' };
             } else if (sellingTechnique?.includes('For Sale By Owner')) {
-                // Legal, admin fees, potential small buyer agent commission. 
                 feeRange = { min: 0.5, max: 2, applies: true, feeType: 'Legal/Admin Fees Only' };
             } else if (sellingTechnique?.includes('Off-Market')) {
-                // Legal, admin fees, potential small finder's fee.
                 feeRange = { min: 1, max: 3, applies: true, feeType: 'Low Transaction/Finder Fees' };
             }
 
-            // Calculate Net to Seller impact (Discount + Fees)
             strategy.minDiscount = Math.max(0, strategy.minDiscount); 
             
             const netMin = strategy.minDiscount + feeRange.min; 
@@ -565,7 +502,7 @@
             strategy.feeRange = feeRange;
             strategy.netDiscountRange = { min: netMin, max: netMax };
             
-            // Format percentage string cleanly for the final display
+            // Format percentage string for final display
             if (strategy.approach.includes('Below Market Value Pricing')) {
                 strategy.percentage = `${100 - strategy.maxDiscount}% - ${100 - strategy.minDiscount}% of estimated market value`;
             } else if (strategy.approach.includes('Market Value Pricing')) {
@@ -583,13 +520,13 @@
           const getQuestionIndex = (currentStep) => {
               if (currentStep < MARKET_DATA_STEP_INDEX) return currentStep;
               if (currentStep > MARKET_DATA_STEP_INDEX) return currentStep - 1;
-              return null; // Market Data Step
+              return null; 
           }
           
           const currentQuestionIndex = getQuestionIndex(step);
           const currentQuestion = currentQuestionIndex !== null ? questions[currentQuestionIndex] : null;
 
-          // Results View
+          // --- Results View ---
           if (showResults) {
             const strategy = calculatePricingStrategy();
 
@@ -601,9 +538,6 @@
                       <DollarSign className="w-12 h-12 text-green-600" />
                     </div>
                     <h2 className="text-3xl font-bold text-gray-800 mb-2">Your Final Pricing Strategy</h2>
-                    <p className="text-gray-600">
-                      Based on your answers for {answers.neighborhood ? `${answers.neighborhood}, ` : ''}{answers.city}
-                    </p>
                   </div>
 
                   <div className="space-y-6">
@@ -620,13 +554,13 @@
                         </ul>
                     </div>
 
-                    {/* Main Strategy & Net to Seller (Clutter Minimized) */}
+                    {/* Main Strategy & Net to Seller */}
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-6 rounded-r-lg">
                       <h3 className="text-xl font-bold text-green-900 mb-2">Recommended Approach</h3>
                       <p className="text-2xl font-semibold text-green-700 mb-2">{strategy.approach}</p>
                       <p className="text-xl text-green-600">Target Listing Price: {strategy.percentage}</p>
                       
-                      {/* NET TO SELLER CALCULATION */}
+                      {/* NET TO SELLER CALCULATION - Minimized Clutter */}
                       <div className="mt-4 pt-4 border-t border-green-200">
                         <h4 className="text-lg font-bold text-green-800 flex items-center mb-1">
                           <DollarSign className="w-5 h-5 mr-1" /> Estimated Net-to-Seller Impact
@@ -660,13 +594,14 @@
                     {/* Tactics */}
                     <div className="bg-white border border-gray-200 p-6 rounded-lg">
                       <h3 className="text-lg font-bold text-gray-800 mb-3">Implementation Tactics</h3>
+                      {/* Using simplified tactics array from the calculation */}
                       <ul className="space-y-2">
-                        {strategy.tactics.map((tactic, idx) => (
+                        {strategy.tactics.length > 0 ? strategy.tactics.map((tactic, idx) => (
                           <li key={idx} className="flex items-start">
                             <span className="text-green-500 mr-2 mt-1">✓</span>
                             <span className="text-gray-700">{tactic}</span>
                           </li>
-                        ))}
+                        )) : <p className="text-gray-600 text-sm">No specific tactics added based on current inputs.</p>}
                       </ul>
                     </div>
 
@@ -722,11 +657,12 @@
             );
           }
 
+          // --- Question/Input View ---
           let pageTitle, pageContent, disableNextButton = false;
 
           if (step === MARKET_DATA_STEP_INDEX) {
-              // 2. Market Data Input Page
-              pageTitle = "Step 5/9: Input Market Research Data";
+              // Market Data Input Page
+              pageTitle = `Step ${step + 1}/${TOTAL_STEPS}: Input Market Research Data`;
               pageContent = (
                   <MarketDataInputForm 
                       city={answers.city} 
@@ -736,15 +672,15 @@
                   />
               );
 
-              // Disable next if required fields in rawMarketData are missing
               const requiredMarketData = ['snlr', 'avgDOM', 'priceTrend90Days'];
+              // UX: Require SNLR, DOM, and Price Trend before proceeding.
               disableNextButton = requiredMarketData.some(id => !rawMarketData[id]);
 
           } else {
-              // 1. Standard Question Page
+              // Standard Question Page
               const Icon = currentQuestion.icon;
               const stepNumber = step < MARKET_DATA_STEP_INDEX ? step + 1 : step;
-              pageTitle = `Step ${stepNumber}/${TOTAL_STEPS}: Property & Strategy Details`;
+              pageTitle = `Step ${step + 1}/${TOTAL_STEPS}: Property & Strategy Details`;
               
               pageContent = (
                 <div className="bg-white rounded-xl p-0">
@@ -785,7 +721,6 @@
               disableNextButton = !answers[currentQuestion.id];
           }
 
-          // Question/Input View
           return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-8 flex items-center justify-center">
               <div className="max-w-xl w-full mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-10">
