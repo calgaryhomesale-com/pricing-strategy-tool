@@ -296,6 +296,41 @@
             return ideal;
         };
 
+        const getSellingOptionsAdvice = (sellingTechnique, urgency) => {
+            let advice = { works: [], avoid: [] };
+            const isUrgent = urgency?.includes('Very urgent');
+            const isTraditional = sellingTechnique?.includes('Traditional MLS');
+            const isOffMarket = sellingTechnique?.includes('Off-Market');
+            const isFSBO = sellingTechnique?.includes('For Sale By Owner');
+
+            // Default suggestions based on chosen method
+            if (isTraditional || sellingTechnique?.includes('Hybrid')) {
+                advice.works.push('Full-Service Realtor (High exposure, handles negotiation)', 'Discount Brokerage (Lower fee, still uses MLS)');
+                advice.avoid.push('We Buy Houses (Likely lowball offer, large discount)', 'FSBO (Lacks the expertise and exposure needed)');
+            } else if (isOffMarket) {
+                advice.works.push('Local Investor/Flippers (Guaranteed speed, fixed discount)', 'Wholesalers/Finder Services (For speed and convenience)');
+                advice.avoid.push('Traditional MLS Listing (Too slow for this path)', 'Negotiating based on comparable sales (Investor math is different)');
+            } else if (isFSBO) {
+                advice.works.push('Self-listing (Save on listing commission, but requires personal time/risk)');
+                advice.avoid.push('Flat-Fee MLS services (Can be limited compared to full MLS exposure)');
+            } else { // Default or Auction
+                advice.works.push('MLS Listing (Best exposure and maximum buyer pool)');
+                advice.avoid.push('Discount Buyer Commission (You must still pay the buyer\'s agent commission - budget for 2-2.5%)');
+            }
+
+            // Urgency specific suggestions
+            if (isUrgent) {
+                advice.works.push('Professional staging/photos (Increases traffic and reduces DOM)');
+                if (isTraditional) {
+                    advice.works.push('Investor/We Buy Houses as a *backup* (If 30-day deadline is missed)');
+                }
+            } else {
+                advice.avoid.push('Selling to "We Buy Houses" companies (Unless you are truly distressed or urgently need cash)');
+            }
+            
+            return advice;
+        };
+
 
         // Main Component
         function HomePricingTool() {
@@ -354,7 +389,6 @@
                     netDiscountRange: { min: 0, max: 0 },
                     minDiscount: 0, 
                     maxDiscount: 0,
-                    timeframeOption: { suggestion: '', reason: [] },
                     userSellingTechnique: sellingTechnique
                 };
 
@@ -468,7 +502,8 @@
                 let feeRange = { min: 0, max: 0, applies: false, feeType: 'No Commission' };
 
                 if (sellingTechnique?.includes('Traditional MLS') || sellingTechnique?.includes('Hybrid')) {
-                    feeRange = { min: 3, max: 5, applies: true, feeType: 'Standard MLS Commission/Fees' }; 
+                    // FIX 1: Change "Standard" to "Average"
+                    feeRange = { min: 3, max: 5, applies: true, feeType: 'Average MLS Commission/Fees' }; 
                 } else if (sellingTechnique?.includes('Auction')) {
                     feeRange = { min: 5, max: 8, applies: true, feeType: 'Auction Fees/Commissions' };
                 } else if (sellingTechnique?.includes('For Sale By Owner')) {
@@ -524,6 +559,8 @@
                 if (strategy.approach.includes('Market Value Pricing') && strategy.minDiscount > idealStrategy.minDiscount) {
                      improvementPoints.push('Your high urgency has increased the required discount by 3-5%. The ideal strategy would give you more time for a better price.');
                 }
+                
+                const sellingAdvice = getSellingOptionsAdvice(strategy.userSellingTechnique, answers.urgency);
 
 
                 return (
@@ -548,9 +585,47 @@
                                     <h4 className="text-xl text-green-800 font-semibold border-t border-green-200 pt-3">
                                         Target Listing Price: {strategy.percentage}
                                     </h4>
+
+                                    {/* SELLING OPTIONS ADVICE */}
+                                    <div className="mt-4 pt-4 border-t border-green-200">
+                                        <h4 className="text-sm font-bold text-green-800 mb-1">Selling Options Advice:</h4>
+                                        <div className="flex gap-6">
+                                            {/* Works */}
+                                            <div className="flex-1">
+                                                <p className="text-sm font-semibold text-green-700 mb-1">✅ Options That Work:</p>
+                                                <ul className="list-disc list-inside space-y-0.5 ml-2">
+                                                    {sellingAdvice.works.map((item, idx) => <li key={`work-${idx}`} className="text-xs text-green-700">{item}</li>)}
+                                                </ul>
+                                            </div>
+                                            {/* Avoid */}
+                                            <div className="flex-1">
+                                                <p className="text-sm font-semibold text-red-700 mb-1">❌ Options to Avoid:</p>
+                                                <ul className="list-disc list-inside space-y-0.5 ml-2">
+                                                    {sellingAdvice.avoid.map((item, idx) => <li key={`avoid-${idx}`} className="text-xs text-red-700">{item}</li>)}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 
-                                {/* 2. MARKET-IDEAL STRATEGY (SECOND) */}
+                                {/* 2. NET IMPACT (MOVED TO SECOND POSITION) */}
+                                <div className="bg-gray-50 border border-gray-200 p-6 rounded-lg shadow-md">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center">
+                                        <DollarSign className="w-5 h-5 mr-1" /> Estimated Total Cost/Discount Range
+                                    </h3>
+                                    <p className="text-2xl font-semibold text-red-600">
+                                        {strategy.netDiscountRange.min.toFixed(1)}% - {strategy.netDiscountRange.max.toFixed(1)}%
+                                    </p>
+                                    <p className="text-sm text-gray-600 mt-2">
+                                        <span className='font-bold'>This includes:</span> The required price reduction/negotiation ({strategy.minDiscount.toFixed(0)}%-{strategy.maxDiscount.toFixed(0)}%) **PLUS** commission/fees ({strategy.feeRange.min}%-{strategy.feeRange.max}% {strategy.feeRange.feeType}).
+                                    </p>
+                                    <p className='text-xs text-gray-500 mt-1'>
+                                        *This range represents the estimated total loss from 100% of the potential market value.*
+                                    </p>
+                                </div>
+
+
+                                {/* 3. MARKET-IDEAL STRATEGY (THIRD) */}
                                 <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg shadow-md">
                                     <h3 className="text-xl font-bold text-blue-900 mb-1 flex items-center">
                                         <Zap className="w-5 h-5 mr-2" />
@@ -580,23 +655,6 @@
                                             Your chosen strategy closely matches the ideal market approach. Great alignment!
                                         </p>
                                     )}
-                                </div>
-
-
-                                {/* 3. NET IMPACT (THIRD) */}
-                                <div className="bg-gray-50 border border-gray-200 p-6 rounded-lg shadow-md">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-center">
-                                        <DollarSign className="w-5 h-5 mr-1" /> Estimated Total Cost/Discount Range
-                                    </h3>
-                                    <p className="text-2xl font-semibold text-red-600">
-                                        {strategy.netDiscountRange.min.toFixed(1)}% - {strategy.netDiscountRange.max.toFixed(1)}%
-                                    </p>
-                                    <p className="text-sm text-gray-600 mt-2">
-                                        <span className='font-bold'>This includes:</span> The required price reduction/negotiation ({strategy.minDiscount}%-{strategy.maxDiscount}%) **PLUS** commission/fees ({strategy.feeRange.min}%-{strategy.feeRange.max}% {strategy.feeRange.feeType}).
-                                    </p>
-                                    <p className='text-xs text-gray-500 mt-1'>
-                                        *This range represents the estimated total loss from 100% of the potential market value.*
-                                    </p>
                                 </div>
 
 
